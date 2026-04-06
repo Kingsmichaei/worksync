@@ -5,7 +5,7 @@ pip install -r requirements.txt
 pip install gunicorn
 python manage.py collectstatic --noinput
 python manage.py migrate
-python manage.py shell -c "
+python manage.py shell -c 
 from django.contrib.auth.models import User 
 if not User.objects.filter(username='admin').exists():
     User.objects.create_superuser(
@@ -16,4 +16,4 @@ if not User.objects.filter(username='admin').exists():
      print('Superuser created successfully')
 else:
     print('Superuser already exists')
-    "
+    
