@@ -1,0 +1,379 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
+    <link rel="icon" href="{% url 'favicon_svg' %}" type="image/svg+xml" sizes="any">
+    <title>Dashboard</title>
+ <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">   
+ <link rel="stylesheet" href="{% static 'attendance/dashboard.css' %}" /> 
+</head> 
+
+
+<body>
+    <div class="container">
+
+<h1>Welcome {{ request.user.username }}</h1>
+
+<div class="top-actions">
+    <div class="action-left">
+        <form method="POST" class="inline-form">
+            {% csrf_token %}
+            {% if not attendance.clock_in %}
+                <button name="clock_in" class="btn">Manual Clock In</button>
+            {% endif %}
+
+            {% if attendance.clock_in and not attendance.clock_out %}
+                <button name="clock_out" class="btn">Manual Clock Out</button>
+            {% endif %}
+        </form>
+        
+    </div>
+
+    <div class="action-right">
+        <div class="actions-dropdown">
+            <button class="btn dropdown-toggle" id="actionsToggle">Actions ▼</button>
+            <div class="actions-menu" id="actionsMenu">
+                
+                {% if request.user.is_superuser %}
+                <a href="{% url 'export-csv' %}" class="dropdown-item">Export CSV</a>
+                <a href="{% url 'export-excel' %}" class="dropdown-item">Export Excel</a>
+                <a class="dropdown-item" href="{% url 'attendance_summary' %}">Attendance Summary</a>
+                <a class="dropdown-item" href="{% url 'manage_leaves' %}">Manage Leaves</a>
+                {% else %}
+                    <!-- non‑admins can both request new leave and view their own requests -->
+                    <a class="dropdown-item" href="{% url 'request_leave' %}">My Leaves</a>
+                {% endif %}
+                {% if request.user.is_superuser %}
+
+                    <a class="dropdown-item" href="{% url 'add_user' %}">Add New User</a>
+                {% endif %}
+                <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Facial Recognition Section -->
+<div class="facial-section">
+    <h3>Facial Recognition Attendance</h3>
+    <div class="facial-buttons">
+        {% if not attendance.clock_in %}
+            <button class="btn-facial btn-facial-in" id="facialClockInBtn">
+                📷 Facial Clock In
+            </button>
+        {% else %}
+            <button class="btn-facial btn-facial-in" disabled>
+                ✓ Clocked In
+            </button>
+        {% endif %}
+
+        {% if attendance.clock_in and not attendance.clock_out %}
+            <button class="btn-facial btn-facial-out" id="facialClockOutBtn">
+                📷 Facial Clock Out
+            </button>
+        {% endif %}
+    
+        <button class="btn-facial btn-facial-register" id="registerFaceBtn" title="Register or update your facial data">
+        ⚙️ Register Face
+        </button>
+    </div>
+    <div>
+        {% if request.user.face_data.face_registered %}
+            <span class="status-badge status-registered">✓ Face Registered</span>
+        {% else %}
+            <span class="status-badge status-not-registered">✗ Face Not Registered</span>
+        {% endif %}
+    </div>
+    
+</div>
+
+<!-- Facial Recognition Modal -->
+<div id="facialModal" class="facial-modal">
+    <div class="facial-modal-content">
+        <h3 id="modalTitle">Facial Recognition</h3>
+        <div class="modal-message" id="modalMessage"></div>
+        <video id="facialVideo" autoplay playsinline></video>
+        <div id="loadingSpinner" style="display:none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal btn-verify" id="verifyFaceBtn">Verify Face</button>
+            <button class="btn-modal btn-cancel" id="closeModalBtn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance History Section -->
+
+<div class="section">
+<div class="dropdown-header" onclick="toggleDropdown(event)">
+    <h2 style="margin: 0;">Your Attendance History</h2>
+    <span class="dropdown-arrow">▼</span>
+</div>
+<div class="dropdown-content show" id="attendanceDropdown">
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Method</th>
+        </tr>
+        {% for record in records %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.clock_in }}</td>
+            <td>{{ record.clock_out }}</td>
+            <td>
+                <span style="font-size: 12px;">
+                    {% if record.clock_in %}
+                        In: {{ record.clock_in_method|upper }}
+                    {% endif %}
+                    {% if record.clock_out %}
+                        / Out: {{ record.clock_out_method|upper }}
+                    {% endif %}
+                </span>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No attendance records found.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+</div>
+
+
+
+<!--- Admin-only Staff List -->
+
+{% if request.user.is_superuser %}
+<div class="section table-container">
+<h3>Staff List</h3>
+<div class="table-responsive">
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Full Name</th>
+        <th>Summary</th>
+        <th>Status</th>
+        <th>Action</th>
+        <th>Delete</th>
+    </tr>
+
+    {% for user in users %}
+    <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>
+            <a class="btn" href="{% url 'staff_attendance' user.id %}">Records</a>
+        </td>
+        <td>
+            {% if user.is_active %}
+                <span class="status-active">Active</span>
+            {% else %}
+                <span class="status-inactive">Inactive</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if user.is_active %}
+                <a class="btn1"
+                 href="{% url 'deactivate_user' user.id %}"
+                   onclick="return confirm('Deactivate this user?')">
+                   Deactivate
+                </a>
+            {% else %}
+                <a class="btn2"
+                 href="{% url 'activate_user' user.id %}"
+                   onclick="return confirm('Activate this user?')">
+                  Activate
+                </a>
+            {% endif %}
+        </td>
+                <td>
+                        <a class="btn1"
+                         href="{% url 'delete_user' user.id %}"
+                             onclick="return confirm('Delete this user? This action cannot be undone.')">
+                             Delete
+                             </a>
+                </td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+</div>
+{% endif %}
+
+<script>
+    function toggleDropdown(event) {
+        const dropdown = document.getElementById('attendanceDropdown');
+        const arrow = event.currentTarget.querySelector('.dropdown-arrow');
+        dropdown.classList.toggle('show');
+        arrow.classList.toggle('show');
+    }
+
+    // Facial Recognition
+    const facialModal = document.getElementById('facialModal');
+    const facialVideo = document.getElementById('facialVideo');
+    const facialClockInBtn = document.getElementById('facialClockInBtn');
+    const facialClockOutBtn = document.getElementById('facialClockOutBtn');
+    const registerFaceBtn = document.getElementById('registerFaceBtn');
+    const verifyFaceBtn = document.getElementById('verifyFaceBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalTitle = document.getElementById('modalTitle');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    let currentAction = null;
+    let facialStream = null;
+
+    // Open facial modal
+    async function openFacialModal(action) {
+        currentAction = action;
+        facialModal.classList.add('show');
+        modalTitle.textContent = action === 'clock_in' ? 'Facial Recognition - Clock In' : 'Facial Recognition - Clock Out';
+        modalMessage.classList.remove('show', 'success', 'error');
+        loadingSpinner.style.display = 'none';
+
+        try {
+            facialStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' }
+            });
+            facialVideo.srcObject = facialStream;
+        } catch (err) {
+            showModalMessage('Error accessing camera: ' + err.message, 'error');
+        }
+    }
+
+    // Close facial modal
+    function closeFacialModal() {
+        facialModal.classList.remove('show');
+        currentAction = null;
+        
+        if (facialStream) {
+            facialStream.getTracks().forEach(track => track.stop());
+            facialStream = null;
+        }
+    }
+
+    // Verify face and perform action
+    async function verifyAndClockInOut() {
+        if (!facialVideo.readyState || !facialStream) {
+            showModalMessage('Camera not ready', 'error');
+            return;
+        }
+
+        loadingSpinner.style.display = 'block';
+        verifyFaceBtn.disabled = true;
+
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = facialVideo.videoWidth;
+            canvas.height = facialVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(facialVideo, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            const response = await fetch('{% url "facial_clock" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    action: currentAction,
+                    image: imageData
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showModalMessage('✓ ' + result.message, 'success');
+                setTimeout(() => {
+                    closeFacialModal();
+                    location.reload();
+                }, 2000);
+            } else {
+                showModalMessage('✗ ' + result.message, 'error');
+                loadingSpinner.style.display = 'none';
+                verifyFaceBtn.disabled = false;
+            }
+        } catch (error) {
+            showModalMessage('Error: ' + error.message, 'error');
+            loadingSpinner.style.display = 'none';
+            verifyFaceBtn.disabled = false;
+        }
+    }
+
+    function showModalMessage(msg, type) {
+        modalMessage.textContent = msg;
+        modalMessage.className = 'modal-message';
+        if (msg) {
+            modalMessage.classList.add(type, 'show');
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Event listeners
+    if (facialClockInBtn) {
+        facialClockInBtn.addEventListener('click', () => openFacialModal('clock_in'));
+    }
+    if (facialClockOutBtn) {
+        facialClockOutBtn.addEventListener('click', () => openFacialModal('clock_out'));
+    }
+    if (registerFaceBtn) {
+        registerFaceBtn.addEventListener('click', () => {
+            window.location.href = '{% url "register_face" %}';
+        });
+    }
+    if (verifyFaceBtn) {
+        verifyFaceBtn.addEventListener('click', verifyAndClockInOut);
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeFacialModal);
+    }
+
+    // Close modal when clicking outside
+    facialModal.addEventListener('click', (e) => {
+        if (e.target === facialModal) {
+            closeFacialModal();
+        }
+    });
+
+    // Actions dropdown toggle
+    const actionsToggle = document.getElementById('actionsToggle');
+    const actionsMenu = document.getElementById('actionsMenu');
+    if (actionsToggle && actionsMenu) {
+        actionsToggle.addEventListener('click', () => {
+            actionsMenu.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!actionsToggle.contains(e.target) && !actionsMenu.contains(e.target)) {
+                actionsMenu.classList.remove('show');
+            }
+        });
+    }
+</script>
+</div>
+</body>
+</html>

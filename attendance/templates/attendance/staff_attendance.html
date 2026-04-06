@@ -1,0 +1,36 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
+    <link rel="icon" href="{% url 'favicon_svg' %}" type="image/svg+xml" sizes="any">
+    <title>Staff Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="{% static 'attendance/dashboard.css' %}" />
+</head>
+
+<body>
+    <div class="container">
+        <h2>{{ user.first_name }} {{ user.last_name }} Attendance Records</h2>
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+            </tr> 
+            {% for record in records %}
+            <tr>
+                <td>{{ record.date }}</td>
+                <td>{{ record.clock_in }}</td>
+                <td>{{ record.clock_out }}</td>
+            </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No attendance records found.</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

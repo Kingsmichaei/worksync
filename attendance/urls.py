@@ -1,0 +1,52 @@
+from django.urls import path
+from . views import (
+    activate_user, deactivate_user, delete_user, login_view, dashboard, 
+    logout_view, add_user, manage_leaves, request_leave, staff_attendance, 
+    update_leave_status, cancel_leave, register_face, capture_face_for_registration,
+    facial_recognition_clock_in_out, facial_login, attendance_summary,
+    export_attendance_csv, export_attendance_excel, favicon_ico, favicon_svg
+)
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    path('favicon.ico', favicon_ico, name='favicon_ico'),
+    path('favicon.svg', favicon_svg, name='favicon_svg'),
+    path('', login_view, name='login'),
+    path('dashboard/', dashboard, name='dashboard'),
+    path('logout/', logout_view, name='logout'),
+    path('add_user/', add_user, name='add_user'),
+    path('deactivate-user/<int:user_id>/', deactivate_user, name='deactivate_user'),
+    path('activate-user/<int:user_id>/', activate_user, name='activate_user'),
+    path('delete-user/<int:user_id>/', delete_user, name='delete_user'),
+    path('staff-attendance/<int:user_id>/', staff_attendance, name='staff_attendance'),
+    path('request-leave/', request_leave, name='request_leave'),
+    path('manage-leaves/',manage_leaves, name='manage_leaves'),
+    path('update-leave-status/<int:leave_id>/<str:status>/',update_leave_status, name='update_leave_status'),
+    path('cancel-leave/<int:leave_id>/', cancel_leave, name='cancel_leave'),
+    path('attendance-summary/', attendance_summary, name='attendance_summary'),
+
+    ##personal export (any logged user)
+    # path('attendance/export/my/csv/',export_my_attendance_csv, name='export_my_csv'),
+    # path('attendance/export/my/excel/',export_my_attendance_excel, name='export_my_excel'),
+    
+    # admin export (superuser only)
+    path('export-csv/', export_attendance_csv, name='export-csv'),
+    path('export-excel/', export_attendance_excel, name='export-excel'),
+    
+    # Facial Recognition URLs
+    path('register-face/', register_face, name='register_face'),
+    path('api/capture-face-registration/', capture_face_for_registration, name='capture_face_registration'),
+    path('api/facial-clock/', facial_recognition_clock_in_out, name='facial_clock'),
+    path('api/facial-login/', facial_login, name='facial_login'),
+    
+    # Password Reset URLs
+    path('password_reset/', auth_views.PasswordResetView.as_view(template_name='attendance/password_reset.html'), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='attendance/password_reset_done.html'), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='attendance/password_reset_confirm.html'), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='attendance/password_reset_complete.html'), name='password_reset_complete'),
+]
+
+
+
+
+
